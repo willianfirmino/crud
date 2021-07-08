@@ -1,0 +1,187 @@
+CREATE TABLESPACE TESTE DATAFILE 'C:\Bases\TESTE.ORA' SIZE 1G  AUTOEXTEND ON NEXT 100M DEFAULT STORAGE (INITIAL 10K NEXT 50K MINEXTENTS 1 MAXEXTENTS 121 PCTINCREASE 10) ONLINE;
+
+create user TESTE identified by 12345 default tablespace TESTE temporary tablespace temp;
+
+GRANT dba TO TESTE WITH ADMIN OPTION;
+
+GRANT CONNECT TO TESTE;
+
+GRANT ALL PRIVILEGES TO TESTE;
+
+CREATE DATABASE TESTEDB USER TESTE IDENTIFIED BY 12345 DATAFILE 'C:\Bases\TESTE.ORA' SIZE 10M REUSE DEFAULT TABLESPACE users AUTOEXTEND ON MAXSIZE UNLIMITED DEFAULT TEMPORARY TABLESPACE temp AUTOEXTEND ON MAXSIZE UNLIMITED;
+
+ 
+
+ 
+
+CREATE TABLE PRODUTO (
+
+  ID_PRODUTO NUMBER(5, 0) NOT NULL,
+
+  DESCR_PRODUTO VARCHAR2(50) NOT NULL,
+
+  VLR_UNITARIO NUMBER(10, 2) NOT NULL,
+
+  CONSTRAINT PRODUTO_PK PRIMARY KEY (ID_PRODUTO)
+
+);
+
+CREATE TABLE CLIENTE (
+
+  ID_CLIENTE NUMBER(5, 0) NOT NULL,
+
+  NOME_CLIENTE VARCHAR2(50) NOT NULL,
+
+  CONSTRAINT CLIENTE_PK PRIMARY KEY (ID_CLIENTE)
+
+);
+
+/* até versão 11g se faz assim */
+
+CREATE TABLE VENDA (
+
+  NUM_VENDA NUMBER(10, 0) NOT NULL,
+
+  DT_VENDA DATE NOT NULL,
+
+  ID_CLIENTE NUMBER(5, 0) NOT NULL,
+
+  CONSTRAINT VENDA_PK PRIMARY KEY (NUM_VENDA)
+
+);
+
+CREATE SEQUENCE SQ_VENDA INCREMENT BY 1 START WITH 1 MAXVALUE 9999999999 MINVALUE 1;
+
+CREATE OR REPLACE TRIGGER TR_VENDA
+
+BEFORE INSERT ON VENDA
+
+FOR EACH ROW
+
+BEGIN
+
+  :new.NUM_VENDA := SQ_VENDA.NEXTVAL;
+
+END;
+
+/* fim */
+
+CREATE TABLE VENDA_ITEM (
+
+  NUM_VENDA NUMBER NOT NULL,
+
+  SEQ_VENDA NUMBER(3, 0) NOT NULL,
+
+  ID_PRODUTO NUMBER(5, 0) NOT NULL,
+
+  QTDE NUMBER(10, 2) NOT NULL,
+
+  VLR_UNITARIO NUMBER(10, 2) NOT NULL,
+
+  CONSTRAINT VENDA_ITEM_PK PRIMARY KEY  (ID_VENDA, SEQ_VENDA)
+
+);
+
+/* a partir da versão 12c pode-se fazer assim */
+
+create table venda_item (
+
+  id_venda number generated always as identity,
+
+  seq_venda number(3, 0) not null,
+
+  id_produto number(5, 0) not null,
+
+  qtde number(10, 2) not null,
+
+  vlr_unitario number(10, 2) not null,
+
+  constraint venda_item_pk primary key  (id_venda, seq_venda)
+
+);
+
+/* fim */
+
+INSERT INTO PRODUTO VALUES ('CAFÉ 500g', 5.5);
+
+INSERT INTO PRODUTO VALUES ('Arroz 5kg', 10.5);
+
+INSERT INTO CLIENTE VALUES ('WILLIAM');
+
+INSERT INTO VENDA (DT_VENDA, ID_CLIENTE) VALUES ('13/11/2020', 1);
+
+INSERT INTO VENDA_ITEM VALUES ((SELECT NUM_VENDA FROM VENDA WHERE DT_VENDA='13/11/2020' AND ID_CLIENTE=1), 1, 1, 3, (SELECT VLR_UNITARIO FROM PRODUTO WHERE ID_PRODUTO=1));
+
+INSERT INTO VENDA_ITEM VALUES ((SELECT NUM_VENDA FROM VENDA WHERE DT_VENDA='13/11/2020' AND ID_CLIENTE=1), 2, 2, 5, (SELECT VLR_UNITARIO FROM PRODUTO WHERE ID_PRODUTO=2));
+
+
+/* update employee */
+update employees
+   set salary = case 
+                  when department_id = 40 then salary * 1.10
+                  when department_id = 70 then salary * 1.15
+                  else salary -- not strictly necessary. just to make sure.
+                end
+where department_id in (40,70);y
+
+
+
+SQL> CREATE OR REPLACE PROCEDURE update_sal(id in number,p_sal in number)
+  2  authid current_user
+  3  AS
+  4  BEGIN
+  5      update EMP set sal = p_sal where empno = id;
+  6  END;
+  /
+  
+
+
+REATE OR REPLACE PROCEDURE INCREASE_WAGE  (empno_in IN NUMBER,
+                                           pct_increase IN NUMBER,
+                                           upper_bound IN NUMBER) AS
+
+  emp_count    NUMBER := 0;
+  emp_sal      employees.salary%TYPE;
+  Results   VARCHAR2(50);
+
+BEGIN
+
+    SELECT salary
+    INTO emp_sal
+    FROM employees
+    WHERE employee_id = empno_in; 
+
+    IF emp_sal < upper_bound
+    AND round(emp_sal + (emp_sal * pct_increase), 2) < upper_bound THEN
+
+        UPDATE employees
+        SET salary = round(salary + (salary * pct_increase),2)
+        WHERE employee_id = empno_in;
+
+        results := 'SUCCESSFUL INCREASE';
+
+    ELSE
+
+        results := 'EMPLOYEE MAKES TOO MUCH, DECREASE RAISE PERCENTAGE';
+
+    END IF;
+    
+    DBMS_OUTPUT.PUT_LINE(results);
+
+EXCEPTION
+
+  WHEN NO_DATA_FOUND THEN
+    RAISE_APPLICATION_ERROR(-20001, 'No employee match for the given ID');
+
+END;
+
+BEGIN
+
+  increase_wage(198,.03,5000);
+
+END;
+
+
+
+Scaffold-DbContext "User Id=scott;Password=<password>;Data Source=myhost:1521/mydb;" 
+Oracle.EntityFrameworkCore -Schemas HR -Tables EMPLOYEES
